@@ -13,6 +13,7 @@ from cookidoo_api.helpers import (
     get_localization_options,
 )
 import aiohttp
+import asyncio
 import time
 from schemas import RecipeStep, TTSSetting, ModeSetting
 
@@ -93,7 +94,7 @@ def _build_step_instruction(step: "RecipeStep") -> dict:
 
         elif setting.type == "mode":
             time_str = _format_time(setting.time_seconds)
-            settings_text = f"{setting.name.capitalize()} /{time_str}"
+            settings_text = f"{setting.name.replace('_', ' ').title()} /{time_str}"
             preset_speed = _MODE_SPEEDS.get(setting.name, "1")
 
             offset = len(text) + 2
@@ -290,7 +291,7 @@ class CookidooService:
                 }
             }
             
-            time.sleep(5)
+            await asyncio.sleep(5)
 
             async with api_session.patch(update_url, json=update_data, headers=headers) as response:
                 print(f"  Response Status: {response.status}")

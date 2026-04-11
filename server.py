@@ -189,8 +189,6 @@ async def generate_recipe_structure(
     Returns:
         str: Validated recipe structure in JSON format, ready for upload
     """
-    import json as _json
-
     try:
         ingredients_list = [
             ing.strip()
@@ -201,8 +199,8 @@ async def generate_recipe_structure(
         ]
 
         try:
-            raw_steps = _json.loads(steps_json)
-        except _json.JSONDecodeError as e:
+            raw_steps = json.loads(steps_json)
+        except json.JSONDecodeError as e:
             return f"Invalid steps_json: {e}\n\nsteps_json must be a JSON array of step objects."
 
         if not isinstance(raw_steps, list):

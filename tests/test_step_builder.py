@@ -192,6 +192,13 @@ def test_ingredient_not_in_text_is_skipped():
     assert "annotations" not in result
 
 
+def test_mode_text_multi_word_name():
+    step = RecipeStep(text="Warm.", settings=[ModeSetting(name="warm_up", time_seconds=60)])
+    result = _build_step_instruction(step)
+    assert "Warm_up" not in result["text"]
+    assert "Warm Up /1 min" in result["text"]
+
+
 def test_ingredient_and_tts_both_present():
     step = RecipeStep(
         text="Add 2 onions, halved.",

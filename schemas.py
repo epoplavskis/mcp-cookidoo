@@ -29,17 +29,14 @@ class TTSSetting(BaseModel):
     )
 
 
+ModeName = Literal["blend", "dough", "turbo", "warm_up", "rice_cooker", "browning", "steaming"]
+
+
 class ModeSetting(BaseModel):
     """Preset Thermomix mode (Blend, Dough, Turbo, Warm Up, Rice Cooker, etc.)."""
 
     type: Literal["mode"] = "mode"
-    name: str = Field(
-        ...,
-        description=(
-            "Lowercase mode name: 'blend', 'dough', 'turbo', "
-            "'warm_up', 'rice_cooker', 'browning', 'steaming'"
-        ),
-    )
+    name: ModeName = Field(..., description="Mode name")
     time_seconds: int = Field(..., description="Duration in seconds", ge=1)
 
 
