@@ -14,6 +14,101 @@ from cookidoo_api.helpers import (
 )
 import aiohttp
 import time
+from schemas import RecipeStep, TTSSetting, ModeSetting
+
+
+# Mode preset speeds (from API observations)
+_MODE_SPEEDS: dict[str, str] = {
+    "blend": "7",
+    "dough": "2",
+    "turbo": "10",
+    "warm_up": "1",
+    "rice_cooker": "1",
+    "browning": "3",
+    "steaming": "3",
+}
+
+# CCW arrow character used in reverse-mode machine settings text
+_CCW_CHAR = "\u21BA"  # ↺
+
+
+def _format_time(seconds: int) -> str:
+    mins, secs = divmod(seconds, 60)
+    if mins == 0:
+        return f"{secs} sec"
+    if secs == 0:
+        return f"{mins} min"
+    return f"{mins} min {secs} sec"
+
+
+def _build_step_instruction(step: "RecipeStep") -> dict:
+    """Convert a RecipeStep into the Cookidoo API instruction format with annotations."""
+    text = step.text
+    annotations: list[dict] = []
+
+    # INGREDIENT annotations — computed against original text before settings are appended
+    if step.linked_ingredients:
+        for description in step.linked_ingredients:
+            offset = text.find(description)
+            if offset >= 0:
+                annotations.append({
+                    "type": "INGREDIENT",
+                    "data": {"description": description},
+                    "position": {"offset": offset, "length": len(description)},
+                })
+
+    # Machine setting annotations — each appended sequentially with two-space separator
+    for setting in (step.settings or []):
+        if setting.type == "tts":
+            time_str = _format_time(setting.time_seconds)
+            if setting.direction == "CCW":
+                if setting.temperature:
+                    settings_text = f"{time_str}/{setting.temperature.value}°{setting.temperature.unit}/{_CCW_CHAR}/speed {setting.speed}"
+                else:
+                    settings_text = f"{time_str}/{_CCW_CHAR}/speed {setting.speed}"
+            else:
+                if setting.temperature:
+                    settings_text = f"{time_str}/{setting.temperature.value}°{setting.temperature.unit}/speed {setting.speed}"
+                else:
+                    settings_text = f"{time_str}/speed {setting.speed}"
+
+            offset = len(text) + 2
+            text = f"{text}  {settings_text}"
+
+            tts_data: dict = {"speed": setting.speed, "time": setting.time_seconds}
+            if setting.temperature:
+                tts_data["temperature"] = {
+                    "value": setting.temperature.value,
+                    "unit": setting.temperature.unit,
+                }
+            if setting.direction:
+                tts_data["direction"] = setting.direction
+
+            annotations.append({
+                "type": "TTS",
+                "data": tts_data,
+                "position": {"offset": offset, "length": len(settings_text)},
+            })
+
+        elif setting.type == "mode":
+            time_str = _format_time(setting.time_seconds)
+            settings_text = f"{setting.name.capitalize()} /{time_str}"
+            preset_speed = _MODE_SPEEDS.get(setting.name, "1")
+
+            offset = len(text) + 2
+            text = f"{text}  {settings_text}"
+
+            annotations.append({
+                "type": "MODE",
+                "name": setting.name,
+                "data": {"speed": preset_speed, "time": setting.time_seconds},
+                "position": {"offset": offset, "length": len(settings_text)},
+            })
+
+    instruction: dict = {"type": "STEP", "text": text}
+    if annotations:
+        instruction["annotations"] = annotations
+    return instruction
 
 
 def load_cookidoo_credentials() -> tuple[str, str]:
