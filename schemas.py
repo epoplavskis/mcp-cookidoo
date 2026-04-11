@@ -50,6 +50,8 @@ StepSetting = Annotated[
 
 
 class RecipeStep(BaseModel):
+    """A single cooking step with optional machine settings and ingredient links."""
+
     text: str = Field(..., description="Full human-readable step description")
     settings: Optional[list[StepSetting]] = Field(
         default=None,
@@ -117,7 +119,7 @@ class CustomRecipe(BaseModel):
     steps: list[RecipeStep] = Field(
         ..., description="List of cooking steps", min_length=1
     )
-    servings: int = Field(default=4, ge=1, le=20)
+    servings: int = Field(default=4, description="Number of servings", ge=1, le=20)
     prep_time: int = Field(default=30, description="Preparation time in minutes", ge=1, le=1440)
     total_time: int = Field(default=60, description="Total cooking time in minutes", ge=1, le=1440)
     hints: Optional[list[str]] = Field(default=None, description="Optional cooking tips")

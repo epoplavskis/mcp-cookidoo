@@ -1,4 +1,3 @@
-import pytest
 from schemas import Temperature, TTSSetting, ModeSetting, RecipeStep, CustomRecipe
 
 
