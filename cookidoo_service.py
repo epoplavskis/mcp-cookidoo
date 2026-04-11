@@ -211,7 +211,7 @@ class CookidooService:
         Args:
             name: Recipe name
             ingredients: List of ingredient descriptions
-            steps: List of cooking step descriptions
+            steps: List of RecipeStep objects with optional machine settings and ingredient links
             servings: Number of servings (default: 4)
             prep_time: Preparation time in minutes (default: 30)
             total_time: Total cooking time in minutes (default: 60)
