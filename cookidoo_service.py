@@ -33,6 +33,7 @@ _CCW_CHAR = "\u21BA"  # ↺
 
 
 def _format_time(seconds: int) -> str:
+    """Format seconds as human-readable time string. Requires seconds >= 1."""
     mins, secs = divmod(seconds, 60)
     if mins == 0:
         return f"{secs} sec"

@@ -85,12 +85,17 @@ def test_plain_step_no_annotations():
 
 
 def test_tts_no_temp_appended():
+    # "Blend." = 6 chars -> offset 8, "30 sec/speed 10" = 15 chars
     step = RecipeStep(
         text="Blend.",
         settings=[TTSSetting(time_seconds=30, speed="10")],
     )
     result = _build_step_instruction(step)
     assert result["text"] == "Blend.  30 sec/speed 10"
+    tts = next(a for a in result["annotations"] if a["type"] == "TTS")
+    assert tts["position"]["offset"] == 8
+    assert tts["position"]["length"] == 15
+    assert tts["data"] == {"speed": "10", "time": 30}
 
 
 def test_tts_with_temp_appended():
