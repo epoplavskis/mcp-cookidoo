@@ -14,7 +14,7 @@ from cookidoo_api.helpers import (
 )
 import aiohttp
 import asyncio
-from schemas import RecipeStep, TTSSetting, ModeSetting
+from schemas import RecipeStep
 
 
 # Mode preset speeds (from API observations)
