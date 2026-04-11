@@ -6,7 +6,7 @@ Main server file containing MCP tool definitions for interacting with Cookidoo.
 
 from fastmcp import FastMCP
 from cookidoo_service import CookidooService, load_cookidoo_credentials
-from schemas import CustomRecipe
+from schemas import CustomRecipe, RecipeStep
 import json
 
 # Initialize FastMCP server
@@ -133,7 +133,7 @@ async def get_recipe_details(recipe_id: str) -> str:
 async def generate_recipe_structure(
     name: str,
     ingredients: str,
-    steps: str,
+    steps_json: str,
     servings: int = 4,
     prep_time: int = 30,
     total_time: int = 60,
@@ -141,48 +141,83 @@ async def generate_recipe_structure(
 ) -> str:
     """
     Generate and validate a recipe structure ready for upload to Cookidoo.
-    
-    This tool helps you structure your recipe data properly before uploading.
-    It validates all fields and returns a JSON structure that can be used with
-    the upload_custom_recipe tool.
-    
+
     Args:
         name: Recipe name (required)
         ingredients: Ingredients list, one per line or comma-separated
-        steps: Cooking steps, one per line or numbered
+        steps_json: JSON array of step objects. Each step must have a "text" field.
+
+            Plain step (no machine setting):
+              {"text": "Preheat oven to 200°C."}
+
+            TTS step (manual machine setting):
+              {
+                "text": "Add 2 onions, halved to bowl.",
+                "settings": [
+                  {
+                    "type": "tts",
+                    "time_seconds": 5,
+                    "speed": "5",
+                    "temperature": {"value": "120", "unit": "C"},
+                    "direction": "CCW"
+                  }
+                ],
+                "linked_ingredients": ["2 onions, halved"]
+              }
+
+            MODE step (preset mode):
+              {
+                "text": "Blend the sauce.",
+                "settings": [{"type": "mode", "name": "blend", "time_seconds": 30}]
+              }
+
+            A step can have multiple settings in sequence.
+
+            TTS fields:
+              - time_seconds (int): duration e.g. 60
+              - speed (str): "0.5", "1" ... "10"
+              - temperature (object, optional): {"value": "100", "unit": "C"}
+              - direction (str, optional): "CCW" for Reverse; omit for Normal
+
+            MODE names: blend, dough, turbo, warm_up, rice_cooker, browning, steaming
+
         servings: Number of servings (default: 4, range: 1-20)
         prep_time: Preparation time in minutes (default: 30)
         total_time: Total cooking time in minutes (default: 60)
         hints: Optional cooking tips, one per line or comma-separated
-        
+
     Returns:
         str: Validated recipe structure in JSON format, ready for upload
     """
+    import json as _json
+
     try:
-        # Parse ingredients (split by newlines or commas)
         ingredients_list = [
-            ing.strip() 
-            for ing in (ingredients.split('\n') if '\n' in ingredients else ingredients.split(','))
+            ing.strip()
+            for ing in (
+                ingredients.split("\n") if "\n" in ingredients else ingredients.split(",")
+            )
             if ing.strip()
         ]
-        
-        # Parse steps (split by newlines or numbered steps)
-        steps_list = [
-            step.strip().lstrip('0123456789.)-• ')
-            for step in steps.split('\n')
-            if step.strip()
-        ]
-        
-        # Parse hints if provided
+
+        try:
+            raw_steps = _json.loads(steps_json)
+        except _json.JSONDecodeError as e:
+            return f"Invalid steps_json: {e}\n\nsteps_json must be a JSON array of step objects."
+
+        if not isinstance(raw_steps, list):
+            return "steps_json must be a JSON array."
+
+        steps_list = [RecipeStep(**s) for s in raw_steps]
+
         hints_list = None
         if hints:
             hints_list = [
-                hint.strip()
-                for hint in (hints.split('\n') if '\n' in hints else hints.split(','))
-                if hint.strip()
+                h.strip()
+                for h in (hints.split("\n") if "\n" in hints else hints.split(","))
+                if h.strip()
             ]
-        
-        # Create and validate the recipe using Pydantic
+
         recipe = CustomRecipe(
             name=name,
             ingredients=ingredients_list,
@@ -190,14 +225,11 @@ async def generate_recipe_structure(
             servings=servings,
             prep_time=prep_time,
             total_time=total_time,
-            hints=hints_list
+            hints=hints_list,
         )
-        
-        # Return formatted JSON
-        recipe_json = recipe.model_dump_json(indent=2)
-        
-        return f"Recipe structure validated successfully!\n\n{recipe_json}\n\nYou can now use this with 'upload_custom_recipe'."
-        
+
+        return f"Recipe structure validated successfully!\n\n{recipe.model_dump_json(indent=2)}\n\nYou can now use this with 'upload_custom_recipe'."
+
     except Exception as e:
         return f"Validation failed: {str(e)}\n\nPlease check your recipe data and try again."
 

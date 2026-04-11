@@ -199,7 +199,7 @@ class CookidooService:
         self,
         name: str,
         ingredients: list[str],
-        steps: list[str],
+        steps: list[RecipeStep],
         servings: int = 4,
         prep_time: int = 30,
         total_time: int = 60,
@@ -282,7 +282,7 @@ class CookidooService:
                 "cookTime": 0,
                 "totalTime": total_time * 60,  # Convert minutes to seconds
                 "ingredients": [{"type": "INGREDIENT", "text": ing} for ing in ingredients],
-                "instructions": [{"type": "STEP", "text": step} for step in steps],
+                "instructions": [_build_step_instruction(step) for step in steps],
                 "hints": "\n".join(hints) if hints and isinstance(hints, list) else (hints if hints else ""),
                 "workStatus": "PRIVATE",
                 "recipeMetadata": {
