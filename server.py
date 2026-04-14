@@ -313,6 +313,50 @@ async def upload_custom_recipe(recipe_json: str) -> str:
 
 
 @mcp.tool()
+async def get_custom_recipe(recipe_id: str) -> str:
+    """
+    Get details of a custom recipe you created on your Cookidoo account.
+
+    Args:
+        recipe_id: The ID of the custom recipe (e.g. "01KNY4A5HSKZTR6MPZ2K0SJ4EX")
+
+    Returns:
+        str: Recipe details including name, ingredients, steps, servings, and times
+    """
+    global _cookidoo_api
+
+    try:
+        if not _cookidoo_api:
+            return "Not connected. Please run 'connect_to_cookidoo' first."
+
+        recipe = await _cookidoo_api.get_custom_recipe(recipe_id)
+
+        result = f"Custom Recipe: {recipe.name}\n"
+        result += f"ID: {recipe.id}\n"
+        result += f"URL: {recipe.url}\n\n"
+
+        result += f"Servings: {recipe.serving_size}\n"
+        result += f"Prep time: {recipe.active_time // 60} min\n"
+        result += f"Total time: {recipe.total_time // 60} min\n"
+
+        if recipe.tools:
+            result += f"Tools: {', '.join(recipe.tools)}\n"
+
+        result += "\nIngredients:\n"
+        for ing in recipe.ingredients:
+            result += f"  • {ing}\n"
+
+        result += "\nSteps:\n"
+        for i, step in enumerate(recipe.instructions, 1):
+            result += f"  {i}. {step}\n"
+
+        return result
+
+    except Exception as e:
+        return f"Failed to get custom recipe: {str(e)}"
+
+
+@mcp.tool()
 async def update_custom_recipe(recipe_id: str, recipe_json: str) -> str:
     """
     Update an existing custom recipe on your Cookidoo account.
