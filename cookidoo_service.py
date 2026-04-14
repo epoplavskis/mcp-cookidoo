@@ -204,10 +204,11 @@ class CookidooService:
         prep_time: int = 30,
         total_time: int = 60,
         hints: Optional[list[str]] = None,
+        tools: list[str] = ["TM6"],
     ) -> str:
         """
         Create a completely new custom recipe from scratch using the undocumented API.
-        
+
         Args:
             name: Recipe name
             ingredients: List of ingredient descriptions
@@ -216,10 +217,11 @@ class CookidooService:
             prep_time: Preparation time in minutes (default: 30)
             total_time: Total cooking time in minutes (default: 60)
             hints: Optional list of hints/tips for the recipe
-            
+            tools: List of compatible Thermomix models, e.g. ["TM6", "TM7"] (default: ["TM6"])
+
         Returns:
             str: The created recipe ID
-            
+
         Raises:
             Exception: If recipe creation fails
         """
@@ -276,7 +278,7 @@ class CookidooService:
                 "name": name,
                 "image": None,  # Can be null or match pattern: ^((prod|nonprod)/img/customer-recipe/)?[A-Za-z0-9-_]{1,}.(bmp|jpe|jpeg|jpg|png)$
                 "isImageOwnedByUser": False,
-                "tools": ["TM6"],
+                "tools": tools,
                 "yield": {"value": servings, "unitText": "portion"},
                 "prepTime": prep_time * 60,  # Convert minutes to seconds
                 "cookTime": 0,

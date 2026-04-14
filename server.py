@@ -138,6 +138,7 @@ async def generate_recipe_structure(
     prep_time: int = 30,
     total_time: int = 60,
     hints: str = "",
+    tools: str = "TM6",
 ) -> str:
     """
     Generate and validate a recipe structure ready for upload to Cookidoo.
@@ -185,6 +186,8 @@ async def generate_recipe_structure(
         prep_time: Preparation time in minutes (default: 30)
         total_time: Total cooking time in minutes (default: 60)
         hints: Optional cooking tips, one per line or comma-separated
+        tools: Comma-separated Thermomix models. Valid: TM5, TM6, TM7.
+            Examples: "TM6" (default), "TM7", "TM6,TM7", "TM5,TM6,TM7"
 
     Returns:
         str: Validated recipe structure in JSON format, ready for upload
@@ -216,6 +219,8 @@ async def generate_recipe_structure(
                 if h.strip()
             ]
 
+        tools_list = [t.strip() for t in tools.split(",") if t.strip()]
+
         recipe = CustomRecipe(
             name=name,
             ingredients=ingredients_list,
@@ -224,6 +229,7 @@ async def generate_recipe_structure(
             prep_time=prep_time,
             total_time=total_time,
             hints=hints_list,
+            tools=tools_list,
         )
 
         return f"Recipe structure validated successfully!\n\n{recipe.model_dump_json(indent=2)}\n\nYou can now use this with 'upload_custom_recipe'."
@@ -271,7 +277,8 @@ async def upload_custom_recipe(recipe_json: str) -> str:
             servings=recipe.servings,
             prep_time=recipe.prep_time,
             total_time=recipe.total_time,
-            hints=recipe.hints
+            hints=recipe.hints,
+            tools=recipe.tools,
         )
         
         # Get localization for URL

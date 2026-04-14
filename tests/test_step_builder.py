@@ -208,3 +208,35 @@ def test_ingredient_and_tts_both_present():
     result = _build_step_instruction(step)
     types = {a["type"] for a in result["annotations"]}
     assert types == {"INGREDIENT", "TTS"}
+
+
+# --- tools field ---
+
+def test_custom_recipe_tools_defaults_to_tm6():
+    recipe = CustomRecipe(
+        name="Test",
+        ingredients=["100g flour"],
+        steps=[RecipeStep(text="Mix.")],
+    )
+    assert recipe.tools == ["TM6"]
+
+
+def test_custom_recipe_tools_accepts_valid_values():
+    recipe = CustomRecipe(
+        name="Test",
+        ingredients=["100g flour"],
+        steps=[RecipeStep(text="Mix.")],
+        tools=["TM5", "TM6", "TM7"],
+    )
+    assert recipe.tools == ["TM5", "TM6", "TM7"]
+
+
+def test_custom_recipe_tools_rejects_invalid():
+    import pytest
+    with pytest.raises(Exception):
+        CustomRecipe(
+            name="Test",
+            ingredients=["100g flour"],
+            steps=[RecipeStep(text="Mix.")],
+            tools=["Oven"],
+        )
