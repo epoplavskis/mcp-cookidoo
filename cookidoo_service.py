@@ -194,7 +194,35 @@ class CookidooService:
         """Close the aiohttp session."""
         if self._session:
             await self._session.close()
-    
+
+    def _build_recipe_payload(
+        self,
+        name: str,
+        ingredients: list[str],
+        steps: list[RecipeStep],
+        servings: int,
+        prep_time: int,
+        total_time: int,
+        hints: Optional[list[str]],
+        tools: list[str],
+    ) -> dict:
+        """Build the PATCH payload dict for create or update."""
+        return {
+            "name": name,
+            "image": None,
+            "isImageOwnedByUser": False,
+            "tools": tools,
+            "yield": {"value": servings, "unitText": "portion"},
+            "prepTime": prep_time * 60,
+            "cookTime": 0,
+            "totalTime": total_time * 60,
+            "ingredients": [{"type": "INGREDIENT", "text": ing} for ing in ingredients],
+            "instructions": [_build_step_instruction(step) for step in steps],
+            "hints": "\n".join(hints) if hints and isinstance(hints, list) else (hints if hints else ""),
+            "workStatus": "PRIVATE",
+            "recipeMetadata": {"requiresAnnotationsCheck": False},
+        }
+
     async def create_custom_recipe(
         self,
         name: str,
@@ -275,25 +303,17 @@ class CookidooService:
             
             # Step 2: Update recipe with ingredients
             update_url = f"{base_url}/created-recipes/{locale}/{recipe_id}"
-            
-            # PATCH requires a complete recipe structure with ALL required fields
-            update_data = {
-                "name": name,
-                "image": None,  # Can be null or match pattern: ^((prod|nonprod)/img/customer-recipe/)?[A-Za-z0-9-_]{1,}.(bmp|jpe|jpeg|jpg|png)$
-                "isImageOwnedByUser": False,
-                "tools": tools,
-                "yield": {"value": servings, "unitText": "portion"},
-                "prepTime": prep_time * 60,  # Convert minutes to seconds
-                "cookTime": 0,
-                "totalTime": total_time * 60,  # Convert minutes to seconds
-                "ingredients": [{"type": "INGREDIENT", "text": ing} for ing in ingredients],
-                "instructions": [_build_step_instruction(step) for step in steps],
-                "hints": "\n".join(hints) if hints and isinstance(hints, list) else (hints if hints else ""),
-                "workStatus": "PRIVATE",
-                "recipeMetadata": {
-                    "requiresAnnotationsCheck": False
-                }
-            }
+
+            update_data = self._build_recipe_payload(
+                name=name,
+                ingredients=ingredients,
+                steps=steps,
+                servings=servings,
+                prep_time=prep_time,
+                total_time=total_time,
+                hints=hints,
+                tools=tools,
+            )
             
             await asyncio.sleep(5)
 
@@ -306,10 +326,88 @@ class CookidooService:
                     raise Exception(f"Failed to update recipe: {response_text}")
             
             return recipe_id
-            
+
         except Exception as e:
             raise Exception(f"Failed to create custom recipe: {str(e)}") from e
-    
+
+    async def update_custom_recipe(
+        self,
+        recipe_id: str,
+        name: str,
+        ingredients: list[str],
+        steps: list[RecipeStep],
+        servings: int = 4,
+        prep_time: int = 30,
+        total_time: int = 60,
+        hints: Optional[list[str]] = None,
+        tools: list[str] | None = None,
+    ) -> str:
+        """
+        Update an existing custom recipe via PATCH.
+
+        Args:
+            recipe_id: The existing recipe ID to update
+            name: Recipe name
+            ingredients: List of ingredient descriptions
+            steps: List of RecipeStep objects with optional machine settings and ingredient links
+            servings: Number of servings (default: 4)
+            prep_time: Preparation time in minutes (default: 30)
+            total_time: Total cooking time in minutes (default: 60)
+            hints: Optional list of hints/tips for the recipe
+            tools: List of compatible Thermomix models, e.g. ["TM6", "TM7"] (default: ["TM6"])
+
+        Returns:
+            str: The updated recipe ID
+
+        Raises:
+            Exception: If the update fails
+        """
+        if tools is None:
+            tools = ["TM6"]
+
+        if not self._api_client or not self._session:
+            raise Exception("Not authenticated. Please call login() first.")
+
+        try:
+            auth_data = self._api_client.auth_data
+            if not auth_data:
+                raise Exception("No authentication data available")
+
+            localization = self._api_client.localization
+            url_parts = localization.url.split("/")
+            base_url = f"{url_parts[0]}//{url_parts[2]}"
+            locale = localization.language
+
+            headers = {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self._api_client.auth_data.access_token}",
+            }
+
+            api_session = self._api_client._session
+            update_url = f"{base_url}/created-recipes/{locale}/{recipe_id}"
+
+            update_data = self._build_recipe_payload(
+                name=name,
+                ingredients=ingredients,
+                steps=steps,
+                servings=servings,
+                prep_time=prep_time,
+                total_time=total_time,
+                hints=hints,
+                tools=tools,
+            )
+
+            async with api_session.patch(update_url, json=update_data, headers=headers) as response:
+                response_text = await response.text()
+                if response.status not in [200, 204]:
+                    raise Exception(f"Failed to update recipe: {response_text}")
+
+            return recipe_id
+
+        except Exception as e:
+            raise Exception(f"Failed to update custom recipe: {str(e)}") from e
+
     @property
     def api_client(self) -> Optional[Cookidoo]:
         """Get the current API client instance."""

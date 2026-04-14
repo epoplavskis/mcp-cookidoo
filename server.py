@@ -289,3 +289,53 @@ async def upload_custom_recipe(recipe_json: str) -> str:
         
     except Exception as e:
         return f"Upload failed: {str(e)}"
+
+
+@mcp.tool()
+async def update_custom_recipe(recipe_id: str, recipe_json: str) -> str:
+    """
+    Update an existing custom recipe on your Cookidoo account.
+
+    Use this to edit a recipe you previously created. Pass the recipe ID and
+    a full recipe JSON (from generate_recipe_structure). All fields will be
+    replaced with the new values.
+
+    Args:
+        recipe_id: The ID of the recipe to update (e.g. "01KNY4A5HSKZTR6MPZ2K0SJ4EX")
+        recipe_json: Full recipe JSON from generate_recipe_structure
+
+    Returns:
+        str: Success message confirming the update
+    """
+    global _cookidoo_service, _cookidoo_api
+
+    try:
+        if not _cookidoo_service or not _cookidoo_api:
+            return "Not connected. Please run 'connect_to_cookidoo' first."
+
+        try:
+            recipe_data = json.loads(recipe_json)
+            recipe = CustomRecipe(**recipe_data)
+        except json.JSONDecodeError as e:
+            return f"Invalid JSON: {str(e)}"
+        except Exception as e:
+            return f"Invalid recipe data: {str(e)}"
+
+        await _cookidoo_service.update_custom_recipe(
+            recipe_id=recipe_id,
+            name=recipe.name,
+            ingredients=recipe.ingredients,
+            steps=recipe.steps,
+            servings=recipe.servings,
+            prep_time=recipe.prep_time,
+            total_time=recipe.total_time,
+            hints=recipe.hints,
+            tools=recipe.tools,
+        )
+
+        localization = _cookidoo_api.localization
+        recipe_url = f"https://{localization.url}/recipes/custom-recipes/{recipe_id}"
+        return f"Recipe '{recipe.name}' updated successfully!\n\nRecipe ID: {recipe_id}\nURL: {recipe_url}"
+
+    except Exception as e:
+        return f"Update failed: {str(e)}"
