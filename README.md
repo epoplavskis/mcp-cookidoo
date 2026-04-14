@@ -8,8 +8,12 @@ An MCP (Model Context Protocol) server for interacting with the Thermomix Cookid
 
 - **Authentication**: Connect to your Cookidoo account securely
 - **Recipe Details**: Fetch detailed recipe information by ID
-- **Recipe Generation**: Structure new custom recipes
+- **Custom Recipe Retrieval**: Get a custom recipe you previously created
+- **Recipe Generation**: Structure and validate new custom recipes with full Thermomix machine settings (TTS, modes, ingredient linking)
 - **Recipe Upload**: Upload custom recipes to your Cookidoo account
+- **Recipe Update**: Edit existing custom recipes
+- **Thermomix Machine Settings**: Supports TTS steps (time/speed/temperature/direction) and preset modes (blend, dough, turbo, steaming, etc.)
+- **Multi-model support**: Tag recipes as compatible with TM5, TM6, and/or TM7
 
 ## Setup
 
@@ -39,10 +43,24 @@ An MCP (Model Context Protocol) server for interacting with the Thermomix Cookid
 
 ## Available Tools
 
-- `connect_to_cookidoo` - Authenticate with Cookidoo
-- `get_recipe_details` - Get detailed recipe by ID
-- `generate_recipe_structure` - Structure a new recipe
-- `upload_custom_recipe` - Upload a recipe to Cookidoo
+| Tool | Description |
+|------|-------------|
+| `connect_to_cookidoo` | Authenticate with Cookidoo (required before all other tools) |
+| `get_recipe_details` | Get full details of any Cookidoo recipe by ID |
+| `get_custom_recipe` | Get a custom recipe you previously created |
+| `generate_recipe_structure` | Validate and structure a new recipe (ingredients, steps with machine settings, servings, tools) |
+| `upload_custom_recipe` | Upload a new custom recipe to your Cookidoo account |
+| `update_custom_recipe` | Update an existing custom recipe by ID |
+
+### Typical workflow
+
+```
+connect_to_cookidoo
+  → generate_recipe_structure   (validate data, get JSON)
+  → upload_custom_recipe        (create on Cookidoo)
+  → update_custom_recipe        (edit later if needed)
+  → get_custom_recipe           (inspect current state)
+```
 
 ## Acknowledgments
 
