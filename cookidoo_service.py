@@ -204,7 +204,7 @@ class CookidooService:
         prep_time: int = 30,
         total_time: int = 60,
         hints: Optional[list[str]] = None,
-        tools: list[str] = ["TM6"],
+        tools: list[str] | None = None,
     ) -> str:
         """
         Create a completely new custom recipe from scratch using the undocumented API.
@@ -227,6 +227,9 @@ class CookidooService:
         """
         if not self._api_client or not self._session:
             raise Exception("Not authenticated. Please call login() first.")
+
+        if tools is None:
+            tools = ["TM6"]
         
         try:
             # Get the access token from the authenticated client
