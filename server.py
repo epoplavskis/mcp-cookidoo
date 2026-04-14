@@ -8,6 +8,7 @@ from fastmcp import FastMCP
 from cookidoo_service import CookidooService, load_cookidoo_credentials
 from schemas import CustomRecipe, RecipeStep
 import json
+import os
 
 # Initialize FastMCP server
 mcp = FastMCP("cookidoo-mcp-server")
@@ -404,3 +405,56 @@ async def update_custom_recipe(recipe_id: str, recipe_json: str) -> str:
 
     except Exception as e:
         return f"Update failed: {str(e)}"
+
+
+def _build_oauth_auth():
+    """
+    Build an OAuthProxy from OIDC env vars if all required vars are set.
+    Returns None if any required var is missing — server runs unauthenticated.
+
+    Required env vars:
+        OIDC_CLIENT_ID, OIDC_AUTH_URL, OIDC_TOKEN_URL,
+        OIDC_JWKS_URI, OIDC_ISSUER, BASE_URL
+
+    Optional env vars:
+        OIDC_CLIENT_SECRET, JWT_SIGNING_KEY
+    """
+    client_id = os.getenv("OIDC_CLIENT_ID")
+    auth_url = os.getenv("OIDC_AUTH_URL")
+    token_url = os.getenv("OIDC_TOKEN_URL")
+    jwks_uri = os.getenv("OIDC_JWKS_URI")
+    issuer = os.getenv("OIDC_ISSUER")
+    base_url = os.getenv("BASE_URL")
+
+    if not all([client_id, auth_url, token_url, jwks_uri, issuer, base_url]):
+        return None
+
+    from fastmcp.server.auth import OAuthProxy
+    from fastmcp.server.auth.providers.jwt import JWTVerifier
+
+    return OAuthProxy(
+        upstream_authorization_endpoint=auth_url,
+        upstream_token_endpoint=token_url,
+        upstream_client_id=client_id,
+        upstream_client_secret=os.getenv("OIDC_CLIENT_SECRET"),
+        token_verifier=JWTVerifier(
+            jwks_uri=jwks_uri,
+            issuer=issuer,
+        ),
+        base_url=base_url,
+        jwt_signing_key=os.getenv("JWT_SIGNING_KEY"),
+    )
+
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    auth = _build_oauth_auth()
+    if auth:
+        print("OIDC authentication enabled")
+        mcp.auth = auth
+    else:
+        print("Warning: running without authentication")
+
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)

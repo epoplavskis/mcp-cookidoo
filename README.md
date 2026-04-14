@@ -41,6 +41,47 @@ An MCP (Model Context Protocol) server for interacting with the Thermomix Cookid
    fastmcp run server.py
    ```
 
+## Running as HTTP Server
+
+To expose the server over HTTP (for use with Claude on mobile or other remote clients):
+
+```bash
+python server.py
+```
+
+The server starts on `http://0.0.0.0:8000`. The MCP endpoint is at `/mcp/`.
+
+### With OIDC Authentication (recommended for public exposure)
+
+Set the OIDC env vars in `.env` (see `.env.example`). The server will require OAuth 2.0 on every request. Works with any standard OIDC provider — Authentik, Google, Okta, Auth0.
+
+**Authentik setup:**
+1. In Authentik, create a new **OAuth2/OpenID Connect Provider**
+2. Set the redirect URI to `https://mcp.yourdomain.com/auth/callback`
+3. Note the Client ID and Client Secret
+4. Fill in the `OIDC_*` vars in `.env` using the provider's endpoints
+5. Set `BASE_URL=https://mcp.yourdomain.com`
+
+**Claude connector config (claude.ai → Add custom connector):**
+- URL: `https://mcp.yourdomain.com/mcp/`
+- OAuth Client ID: *(from your OIDC provider)*
+- OAuth Client Secret: *(from your OIDC provider)*
+
+### Without Authentication
+
+Leave the OIDC env vars unset. The server runs without authentication — suitable for local use or when protected by a VPN/trusted network.
+
+### Docker
+
+```bash
+# Build and push to GitHub Container Registry
+make login   # requires GITHUB_TOKEN env var
+make push    # builds for linux/amd64 and pushes
+
+# Run with docker compose (edit domain in docker-compose.yml first)
+docker compose up -d
+```
+
 ## Available Tools
 
 | Tool | Description |

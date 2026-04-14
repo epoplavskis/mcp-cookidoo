@@ -1,0 +1,17 @@
+services:
+  mcp-cookidoo:
+    image: ${IMAGE:-ghcr.io/epoplavskis/mcp-cookidoo}:latest
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.mcp-cookidoo.rule: "Host(`mcp.yourdomain.com`)"
+      traefik.http.routers.mcp-cookidoo.entrypoints: "websecure"
+      traefik.http.routers.mcp-cookidoo.tls.certresolver: "letsencrypt"
+      traefik.http.services.mcp-cookidoo.loadbalancer.server.port: "8000"
+
+networks:
+  traefik:
+    external: true

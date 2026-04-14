@@ -240,3 +240,57 @@ def test_custom_recipe_tools_rejects_invalid():
             steps=[RecipeStep(text="Mix.")],
             tools=["Oven"],
         )
+
+
+# --- _build_oauth_auth ---
+
+import sys
+from unittest.mock import patch
+
+
+def _reload_server(env: dict):
+    """Import server module with patched env, return the module."""
+    sys.modules.pop("server", None)
+    with patch.dict("os.environ", env, clear=False):
+        import server as s
+        return s
+
+
+def test_build_oauth_auth_returns_none_when_vars_missing():
+    keys = ["OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "OIDC_AUTH_URL",
+            "OIDC_TOKEN_URL", "OIDC_JWKS_URI", "OIDC_ISSUER",
+            "BASE_URL", "JWT_SIGNING_KEY"]
+    clean_env = {k: "" for k in keys}
+    s = _reload_server(clean_env)
+    assert s._build_oauth_auth() is None
+
+
+def test_build_oauth_auth_returns_none_when_partial_vars():
+    s = _reload_server({
+        "OIDC_CLIENT_ID": "my-client",
+        "OIDC_CLIENT_SECRET": "my-secret",
+        "OIDC_AUTH_URL": "",
+        "OIDC_TOKEN_URL": "",
+        "OIDC_JWKS_URI": "",
+        "OIDC_ISSUER": "",
+        "BASE_URL": "",
+    })
+    assert s._build_oauth_auth() is None
+
+
+def test_build_oauth_auth_returns_proxy_when_all_vars_set():
+    from fastmcp.server.auth import OAuthProxy
+    import server as s
+    env = {
+        "OIDC_CLIENT_ID": "my-client",
+        "OIDC_CLIENT_SECRET": "my-secret",
+        "OIDC_AUTH_URL": "https://auth.example.com/authorize",
+        "OIDC_TOKEN_URL": "https://auth.example.com/token",
+        "OIDC_JWKS_URI": "https://auth.example.com/.well-known/jwks.json",
+        "OIDC_ISSUER": "https://auth.example.com/",
+        "BASE_URL": "https://mcp.example.com",
+        "JWT_SIGNING_KEY": "supersecret",
+    }
+    with patch.dict("os.environ", env, clear=False):
+        result = s._build_oauth_auth()
+    assert isinstance(result, OAuthProxy)
