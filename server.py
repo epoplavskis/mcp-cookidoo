@@ -189,6 +189,27 @@ async def generate_recipe_structure(
         tools: Comma-separated Thermomix models. Valid: TM5, TM6, TM7.
             Examples: "TM6" (default), "TM7", "TM6,TM7", "TM5,TM6,TM7"
 
+    TM7 STANDARD SETTINGS REFERENCE (use these as defaults when adapting recipes):
+      Chopping:        5-10 sec / speed 5 / no temp / Normal
+      Sautéing:        5 min / 120°C / speed 1 / Normal
+      Browning mince:  10 min / 120°C / speed 1 / CCW
+      Simmering sauce: 20-30 min / 100°C / speed 1 / CCW
+      Béchamel:        12 min / 90°C / speed 4 / Normal
+      Steaming:        use MODE "steaming" with appropriate time
+
+    INGREDIENT LINKING RULES:
+      - Each string in linked_ingredients must exactly match its entry in the
+        master ingredients list (same quantity, units, and description)
+      - Every ingredient mentioned by name in the step text should also appear
+        in linked_ingredients so the app can bold and link it
+
+    CAPACITY & STEP RULES:
+      - TM7 bowl is 2.2L. Steps with 1 kg+ of mince or large liquid volumes
+        should always use CCW direction and include a spatula reminder in hints
+      - Steps involving baking, assembling, layering, or resting must always be
+        plain steps with no settings block
+      - Always scrape down the bowl after chopping before the next step
+
     Returns:
         str: Validated recipe structure in JSON format, ready for upload
     """
